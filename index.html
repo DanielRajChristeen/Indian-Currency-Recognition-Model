@@ -674,25 +674,26 @@
         }
 
         async function callRoboflowAPI(base64Image) {
-            // Note: This is a simplified version. In production, you'd need to handle CORS
-            // and potentially use a backend proxy for the Roboflow API call
-            
-            const response = await fetch('https://detect.roboflow.com/currency-recognition-model-version1/1', {
+            const response = await fetch('https://serverless.roboflow.com/infer/workflows/daniel-raj-c/currency-recognition-model-version1', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    api_key: ROBOFLOW_CONFIG.apiKey,
-                    image: base64Image
+                    api_key: 'rf_IhLN8BsseZPwyxeEQjzjJZFI7bG2',
+                    inputs: {
+                        "image": {
+                            "type": "base64",
+                            "value": base64Image
+                        }
+                    }
                 })
             });
-            
             if (!response.ok) {
-                throw new Error('API request failed');
+                throw new Error('Roboflow workflow API request failed');
             }
-            
-            return await response.json();
+            const result = await response.json();
+            return result;
         }
 
         function displayResults(results) {
