@@ -12,6 +12,7 @@
 This is a web-based demonstration app for detecting and classifying Indian currency notes using a Roboflow-trained instance segmentation model. The app enables real-time inference directly from uploaded images or webcam input, labeling each note with its denomination.
 
 > 🎯 Model URL: [Currency Recognition Model - Roboflow](https://app.roboflow.com/daniel-raj-c/currency-recognition-model-g16wl)
+> 🎯 Live Demo URL: [Currency Recognition Model - Git Page](https://danielrajchristeen.github.io/Indian-Currency-Recognition-Model/)
 
 ---
 
