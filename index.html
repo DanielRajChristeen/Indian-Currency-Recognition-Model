@@ -307,6 +307,34 @@
             }
         }
 
+        .footer {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin: 1rem auto;
+            max-width: 1200px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .roboflow-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .roboflow-link:hover {
+            color: #764ba2;
+        }
+
+        .footer p {
+            color: #666;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
         @media (min-width: 768px) {
             .main-container {
                 grid-template-columns: 350px 1fr;
@@ -370,6 +398,7 @@
                     <button id="start-camera" class="btn">Start Camera</button>
                     <button id="stop-camera" class="btn" disabled>Stop Camera</button>
                     <button id="capture-photo" class="btn" disabled>Capture Photo</button>
+                    <button id="toggle-live" class="btn" disabled>Start Live</button>
                 </div>
             </div>
             
@@ -399,6 +428,14 @@
             <canvas id="detection-canvas" width="640" height="480"></canvas>
             <div id="loading" class="loading">Processing...</div>
         </div>
+    </div>
+
+    <div class="footer">
+        <a href="https://universe.roboflow.com/daniel-raj-c/currency-recognition-model-g16wl" 
+            class="roboflow-link" target="_blank" rel="noopener noreferrer">
+            🚀 View Roboflow Project - Currency Recognition Model v1
+        </a>
+        <p>Powered by Roboflow AI • Built with ❤️ for accurate currency detection</p>
     </div>
 
     <script>
@@ -450,6 +487,11 @@
             async processImage(imageData, source = 'upload') {
                 console.log(`Processing image from ${source}`);
                 
+                if (this.isProcessing) {
+                    console.log('Already processing, skipping');
+                    return;
+                }
+
                 if (this.pendingRequest) {
                     this.pendingRequest.abort();
                 }
@@ -457,11 +499,6 @@
                 const now = Date.now();
                 if (now - this.lastProcessTime < this.THROTTLE_DELAY && source === 'camera') {
                     console.log('Request throttled');
-                    return;
-                }
-
-                if (this.isProcessing) {
-                    console.log('Already processing, skipping');
                     return;
                 }
                 
@@ -650,14 +687,14 @@
             }
 
             drawLabel(ctx, centroid, className, confidence) {
-                const text = `${className} ${Math.round(confidence * 100)}%`;
+                const text = `${className} (${Math.round(confidence * 100)}%)`;
                 const [x, y] = centroid;
                 
                 // Measure text
-                ctx.font = '14px Arial';
+                ctx.font = '16px Arial';
                 const metrics = ctx.measureText(text);
                 const width = metrics.width + 16;
-                const height = 24;
+                const height = 28;
                 
                 // Background
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -764,6 +801,13 @@
 
         // Camera functionality
         let stream = null;
+        let isLive = false;
+
+        function liveDetectionLoop() {
+            if (!isLive) return;
+            captureAndProcess();
+            requestAnimationFrame(liveDetectionLoop);
+        }
 
         document.getElementById('start-camera').addEventListener('click', async () => {
             console.log('Starting camera...');
@@ -782,6 +826,7 @@
                 document.getElementById('start-camera').disabled = true;
                 document.getElementById('stop-camera').disabled = false;
                 document.getElementById('capture-photo').disabled = false;
+                document.getElementById('toggle-live').disabled = false;
                 
                 showNotification('Camera started successfully!', 'success');
                 
@@ -798,10 +843,12 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
+            isLive = false;
             
             document.getElementById('start-camera').disabled = false;
             document.getElementById('stop-camera').disabled = true;
             document.getElementById('capture-photo').disabled = true;
+            document.getElementById('toggle-live').disabled = true;
             
             showNotification('Camera stopped', 'info');
         });
@@ -809,6 +856,25 @@
         document.getElementById('capture-photo').addEventListener('click', () => {
             console.log('Capturing photo...');
             captureAndProcess();
+        });
+
+        document.getElementById('toggle-live').addEventListener('click', () => {
+            isLive = !isLive;
+            const toggleBtn = document.getElementById('toggle-live');
+            const captureBtn = document.getElementById('capture-photo');
+
+            if (isLive) {
+                console.log('Starting live detection...');
+                toggleBtn.textContent = 'Stop Live';
+                captureBtn.disabled = true;
+                liveDetectionLoop();
+                showNotification('Live detection started', 'info');
+            } else {
+                console.log('Stopping live detection...');
+                toggleBtn.textContent = 'Start Live';
+                captureBtn.disabled = false;
+                showNotification('Live detection stopped', 'info');
+            }
         });
 
         function captureAndProcess() {
