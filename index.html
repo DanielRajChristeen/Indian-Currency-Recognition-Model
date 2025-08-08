@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Currency Recognition App</title>
+    <title>Currency Recognition Model - version1</title>
     <style>
         * {
             margin: 0;
@@ -266,7 +266,6 @@
 
         .notification {
             position: fixed;
-            top: 20px;
             right: 20px;
             padding: 1rem 1.5rem;
             border-radius: 8px;
@@ -275,6 +274,7 @@
             z-index: 1000;
             animation: slideIn 0.3s ease-out;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: top 0.4s ease-in-out;
         }
 
         .notification.error {
@@ -374,7 +374,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🪙 Currency Recognition Model - version 1</h1>
+        <h1>🪙 Currency Recognition Model - version1</h1>
     </div>
 
     <div class="tab-container">
@@ -399,6 +399,7 @@
                     <button id="stop-camera" class="btn" disabled>Stop Camera</button>
                     <button id="capture-photo" class="btn" disabled>Capture Photo</button>
                     <button id="toggle-live" class="btn" disabled>Start Live</button>
+                    <button id="switch-camera" class="btn" disabled>Switch Camera</button>
                 </div>
             </div>
             
@@ -465,11 +466,27 @@
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
             notification.textContent = message;
+            
+            // Position the new notification
+            let topOffset = 20;
+            document.querySelectorAll('.notification').forEach(n => {
+                topOffset += n.offsetHeight + 10;
+            });
+            notification.style.top = `${topOffset}px`;
+
             document.body.appendChild(notification);
             
             setTimeout(() => {
                 notification.style.animation = 'slideOut 0.3s ease-in forwards';
-                setTimeout(() => notification.remove(), 300);
+                setTimeout(() => {
+                    notification.remove();
+                    // Reposition remaining notifications
+                    let offset = 20;
+                    document.querySelectorAll('.notification').forEach(n => {
+                        n.style.top = `${offset}px`;
+                        offset += n.offsetHeight + 10;
+                    });
+                }, 300);
             }, 5000);
         }
 
@@ -802,6 +819,7 @@
         // Camera functionality
         let stream = null;
         let isLive = false;
+        let currentFacingMode = 'environment'; // 'user' for front, 'environment' for rear
 
         function liveDetectionLoop() {
             if (!isLive) return;
@@ -809,14 +827,19 @@
             requestAnimationFrame(liveDetectionLoop);
         }
 
-        document.getElementById('start-camera').addEventListener('click', async () => {
-            console.log('Starting camera...');
+        async function startCamera() {
+            console.log(`Starting camera with facing mode: ${currentFacingMode}`);
             
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
                         width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        height: { ideal: 720 },
+                        facingMode: { ideal: currentFacingMode }
                     } 
                 });
                 
@@ -827,14 +850,23 @@
                 document.getElementById('stop-camera').disabled = false;
                 document.getElementById('capture-photo').disabled = false;
                 document.getElementById('toggle-live').disabled = false;
+                document.getElementById('switch-camera').disabled = false;
                 
                 showNotification('Camera started successfully!', 'success');
                 
             } catch (error) {
                 console.error('Camera error:', error);
                 showNotification('Failed to access camera. Please check permissions.', 'error');
+                // Disable controls if start fails
+                document.getElementById('start-camera').disabled = false;
+                document.getElementById('stop-camera').disabled = true;
+                document.getElementById('capture-photo').disabled = true;
+                document.getElementById('toggle-live').disabled = true;
+                document.getElementById('switch-camera').disabled = true;
             }
-        });
+        }
+
+        document.getElementById('start-camera').addEventListener('click', startCamera);
 
         document.getElementById('stop-camera').addEventListener('click', () => {
             console.log('Stopping camera...');
@@ -849,6 +881,7 @@
             document.getElementById('stop-camera').disabled = true;
             document.getElementById('capture-photo').disabled = true;
             document.getElementById('toggle-live').disabled = true;
+            document.getElementById('switch-camera').disabled = true;
             
             showNotification('Camera stopped', 'info');
         });
@@ -856,6 +889,12 @@
         document.getElementById('capture-photo').addEventListener('click', () => {
             console.log('Capturing photo...');
             captureAndProcess();
+        });
+
+        document.getElementById('switch-camera').addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            console.log(`Switching camera to: ${currentFacingMode}`);
+            startCamera();
         });
 
         document.getElementById('toggle-live').addEventListener('click', () => {
